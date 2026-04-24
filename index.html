@@ -1,0 +1,1324 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Maitl Teotl — Control Exoesqueleto</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+/* ═══════════════════════════════════════
+   VARIABLES & RESET
+═══════════════════════════════════════ */
+:root {
+  --bg:        #080b0f;
+  --surface:   #0d1117;
+  --card:      #111820;
+  --card2:     #131c26;
+  --border:    #1e2a38;
+  --border2:   #243040;
+  --c1:        #00c8ff;
+  --c2:        #ff5722;
+  --c3:        #39ff14;
+  --warn:      #ff3b3b;
+  --ok:        #39ff14;
+  --text:      #d0dce8;
+  --muted:     #4a6070;
+  --muted2:    #2a3c4e;
+  --fh:        'Rajdhani', sans-serif;
+  --fm:        'JetBrains Mono', monospace;
+  --r:         10px;
+  --r2:        6px;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--fh);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image:
+    radial-gradient(circle at 20% 50%, rgba(0,200,255,.04) 0%, transparent 50%),
+    radial-gradient(circle at 80% 20%, rgba(255,87,34,.03) 0%, transparent 40%),
+    linear-gradient(rgba(0,200,255,.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,200,255,.025) 1px, transparent 1px);
+  background-size: 100% 100%, 100% 100%, 32px 32px, 32px 32px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ═══════════════════════════════════════
+   CABECERA
+═══════════════════════════════════════ */
+header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 28px;
+  background: rgba(8,11,15,.92);
+  border-bottom: 1px solid var(--border);
+  backdrop-filter: blur(16px);
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.logo { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+.logo-icon {
+  width: 34px; height: 34px;
+  background: linear-gradient(135deg, var(--c1) 0%, #0060ff 100%);
+  border-radius: 7px;
+  display: grid; place-items: center;
+  font-size: 16px;
+  box-shadow: 0 0 16px rgba(0,200,255,.3);
+}
+.logo-text { font-size: 1.35rem; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; }
+.logo-text em { color: var(--c1); font-style: normal; }
+.logo-ver { font-family: var(--fm); font-size: .6rem; color: var(--muted); margin-top: 2px; }
+
+.conn-bar {
+  display: flex; align-items: center; gap: 10px;
+  flex: 1; justify-content: flex-end; flex-wrap: wrap;
+}
+.ip-group {
+  display: flex; align-items: center; gap: 6px;
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  border-radius: var(--r2);
+  padding: 5px 10px;
+}
+.ip-label { font-family: var(--fm); font-size: .65rem; color: var(--muted); white-space: nowrap; }
+.ip-input {
+  background: transparent; border: none;
+  color: var(--text); font-family: var(--fm); font-size: .8rem;
+  width: 130px; outline: none;
+}
+.ip-input::placeholder { color: var(--muted); }
+
+.btn-connect {
+  padding: 6px 16px;
+  border-radius: var(--r2);
+  border: 1px solid var(--c1);
+  background: rgba(0,200,255,.08);
+  color: var(--c1);
+  font-family: var(--fm); font-size: .72rem; font-weight: 700;
+  cursor: pointer; letter-spacing: 1px; transition: all .2s; white-space: nowrap;
+}
+.btn-connect:hover { background: rgba(0,200,255,.18); box-shadow: 0 0 12px rgba(0,200,255,.2); }
+.btn-connect.connecting { opacity: .6; cursor: not-allowed; }
+
+.conn-status { display: flex; align-items: center; gap: 6px; font-family: var(--fm); font-size: .7rem; }
+.conn-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--muted2); transition: all .4s; flex-shrink: 0;
+}
+.conn-dot.ok    { background: var(--ok);   box-shadow: 0 0 8px var(--ok); }
+.conn-dot.warn  { background: #ffaa00;     box-shadow: 0 0 8px #ffaa00; animation: blink 1s infinite; }
+.conn-dot.error { background: var(--warn); box-shadow: 0 0 8px var(--warn); }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
+.conn-label { color: var(--muted); }
+.conn-ip    { color: var(--c1); font-size: .65rem; }
+
+.ts-link {
+  font-family: var(--fm); font-size: .65rem; color: var(--muted);
+  text-decoration: none; border: 1px solid var(--border2);
+  border-radius: var(--r2); padding: 5px 10px;
+  transition: all .2s; white-space: nowrap;
+}
+.ts-link:hover { color: var(--c1); border-color: var(--c1); }
+
+/* ═══════════════════════════════════════
+   LAYOUT
+═══════════════════════════════════════ */
+main {
+  position: relative; z-index: 1;
+  max-width: 1120px; margin: 0 auto;
+  padding: 24px 20px 80px;
+  display: grid; gap: 20px;
+}
+.section-tag {
+  font-family: var(--fm); font-size: .6rem;
+  letter-spacing: 3px; text-transform: uppercase;
+  color: var(--muted); margin-bottom: 14px;
+  display: flex; align-items: center; gap: 8px;
+}
+.section-tag::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+/* ═══════════════════════════════════════
+   GRID SERVOS
+═══════════════════════════════════════ */
+.servos-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+@media (max-width: 600px) { .servos-grid { grid-template-columns: 1fr; } }
+
+.card {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: var(--r); padding: 20px;
+  position: relative; overflow: hidden; transition: border-color .3s;
+}
+.card.s1 { border-top: 2px solid var(--c1); }
+.card.s2 { border-top: 2px solid var(--c2); }
+.card.flex-card { border-top: 2px solid var(--c3); }
+.card.s1::before {
+  content: ''; position: absolute; top:0; left:0; right:0; height:60px;
+  background: linear-gradient(180deg, rgba(0,200,255,.06) 0%, transparent 100%);
+  pointer-events: none;
+}
+.card.s2::before {
+  content: ''; position: absolute; top:0; left:0; right:0; height:60px;
+  background: linear-gradient(180deg, rgba(255,87,34,.06) 0%, transparent 100%);
+  pointer-events: none;
+}
+.card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+.card-title {
+  font-size: 1.1rem; font-weight: 700; letter-spacing: .5px;
+  text-transform: uppercase; display: flex; align-items: center; gap: 8px;
+}
+.chip {
+  font-family: var(--fm); font-size: .6rem; padding: 2px 7px;
+  border-radius: 3px; font-weight: 700; letter-spacing: 1px;
+}
+.chip.s1 { background: rgba(0,200,255,.12); color: var(--c1); border: 1px solid rgba(0,200,255,.2); }
+.chip.s2 { background: rgba(255,87,34,.12);  color: var(--c2); border: 1px solid rgba(255,87,34,.2); }
+
+/* ÁNGULO + ARCO */
+.angle-row {
+  display: flex; align-items: center;
+  justify-content: space-between; margin-bottom: 14px;
+}
+.angle-big {
+  font-family: var(--fm); font-size: 3.2rem; font-weight: 700;
+  line-height: 1; letter-spacing: -2px;
+}
+.s1 .angle-big { color: var(--c1); text-shadow: 0 0 20px rgba(0,200,255,.4); }
+.s2 .angle-big { color: var(--c2); text-shadow: 0 0 20px rgba(255,87,34,.4); }
+.angle-deg { font-size: 1.4rem; color: var(--muted); font-family: var(--fm); }
+.arc-wrap { flex-shrink: 0; }
+.arc-svg  { overflow: visible; display: block; }
+
+/* SLIDER */
+.slider-wrap { margin-bottom: 12px; }
+.slider-labels {
+  display: flex; justify-content: space-between;
+  font-family: var(--fm); font-size: .58rem; color: var(--muted); margin-bottom: 4px;
+}
+input[type=range] {
+  -webkit-appearance: none; width: 100%; height: 5px;
+  border-radius: 3px; outline: none; cursor: pointer; transition: opacity .2s;
+}
+input[type=range]:disabled { opacity: .35; cursor: not-allowed; }
+.s1 input[type=range] { background: linear-gradient(90deg, var(--c1) var(--fill,50%), var(--border2) var(--fill,50%)); }
+.s2 input[type=range] { background: linear-gradient(90deg, var(--c2) var(--fill,50%), var(--border2) var(--fill,50%)); }
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 16px; height: 16px;
+  border-radius: 50%; border: 2px solid var(--bg);
+  cursor: pointer; transition: transform .15s, box-shadow .15s;
+}
+input[type=range]::-webkit-slider-thumb:active { transform: scale(1.4); }
+.s1 input[type=range]::-webkit-slider-thumb { background: var(--c1); box-shadow: 0 0 8px rgba(0,200,255,.5); }
+.s2 input[type=range]::-webkit-slider-thumb { background: var(--c2); box-shadow: 0 0 8px rgba(255,87,34,.5); }
+
+/* PRESETS */
+.presets { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+.preset-btn {
+  font-family: var(--fm); font-size: .65rem; padding: 4px 10px;
+  border-radius: 4px; border: 1px solid var(--border2);
+  background: transparent; color: var(--muted); cursor: pointer; transition: all .15s;
+}
+.preset-btn:disabled { opacity: .3; cursor: not-allowed; }
+.s1 .preset-btn:hover:not(:disabled) { border-color: var(--c1); color: var(--c1); background: rgba(0,200,255,.08); }
+.s2 .preset-btn:hover:not(:disabled) { border-color: var(--c2); color: var(--c2); background: rgba(255,87,34,.08); }
+
+/* INPUT MANUAL */
+.manual-row { display: flex; gap: 7px; }
+.manual-row input[type=number] {
+  flex: 1; background: var(--surface); border: 1px solid var(--border2);
+  border-radius: var(--r2); color: var(--text); font-family: var(--fm);
+  font-size: .85rem; padding: 7px 10px; outline: none; transition: border-color .2s; min-width: 0;
+}
+.manual-row input[type=number]:focus { border-color: var(--c1); }
+.s2 .manual-row input[type=number]:focus { border-color: var(--c2); }
+.manual-row input[type=number]:disabled { opacity: .35; }
+.btn-send {
+  padding: 7px 16px; border-radius: var(--r2); border: none;
+  cursor: pointer; font-family: var(--fm); font-size: .72rem; font-weight: 700;
+  letter-spacing: 1px; transition: all .15s; flex-shrink: 0;
+}
+.btn-send:disabled { opacity: .35; cursor: not-allowed; }
+.s1 .btn-send { background: var(--c1); color: #000; }
+.s2 .btn-send { background: var(--c2); color: #000; }
+.btn-send:hover:not(:disabled) { filter: brightness(1.15); transform: translateY(-1px); }
+
+/* ═══════════════════════════════════════
+   SENSOR FLEXIÓN
+═══════════════════════════════════════ */
+.flex-body { display: grid; grid-template-columns: auto 1fr; gap: 20px; align-items: center; }
+.flex-num-wrap { text-align: center; }
+.flex-num { font-family: var(--fm); font-size: 2.8rem; font-weight: 700; color: var(--c3); text-shadow: 0 0 20px rgba(57,255,20,.35); line-height: 1; }
+.flex-unit { font-family: var(--fm); font-size: .8rem; color: var(--muted); }
+.flex-raw  { font-family: var(--fm); font-size: .6rem; color: var(--muted); margin-top: 4px; }
+.flex-bar-label { display: flex; justify-content: space-between; font-family: var(--fm); font-size: .6rem; color: var(--muted); margin-bottom: 5px; }
+.flex-bar-bg { height: 10px; background: var(--border2); border-radius: 5px; overflow: hidden; margin-bottom: 8px; }
+.flex-bar-fill {
+  height: 100%; background: linear-gradient(90deg, var(--c3), #a8ff78);
+  border-radius: 5px; transition: width .3s ease; width: 0%;
+  box-shadow: 0 0 8px rgba(57,255,20,.4);
+}
+.flex-state { font-family: var(--fm); font-size: .72rem; color: var(--c3); letter-spacing: 1px; text-transform: uppercase; }
+.flex-nodata { font-family: var(--fm); font-size: .65rem; color: var(--warn); margin-top: 4px; }
+
+.calib-row {
+  display: flex; align-items: center; gap: 8px;
+  margin-top: 12px; padding-top: 12px;
+  border-top: 1px solid var(--border); flex-wrap: wrap;
+}
+.calib-label { font-family: var(--fm); font-size: .62rem; color: var(--muted); white-space: nowrap; }
+.calib-input {
+  background: var(--surface); border: 1px solid var(--border2);
+  border-radius: 4px; color: var(--text); font-family: var(--fm);
+  font-size: .72rem; padding: 3px 7px; width: 70px; outline: none;
+}
+.calib-input:focus { border-color: var(--c3); }
+.btn-calib {
+  padding: 3px 10px; border-radius: 4px;
+  border: 1px solid rgba(57,255,20,.3); background: rgba(57,255,20,.07);
+  color: var(--c3); font-family: var(--fm); font-size: .65rem;
+  cursor: pointer; transition: all .15s;
+}
+.btn-calib:hover:not(:disabled) { background: rgba(57,255,20,.15); }
+.btn-calib:disabled { opacity: .35; cursor: not-allowed; }
+.btn-raw {
+  padding: 3px 10px; border-radius: 4px; border: 1px solid var(--border2);
+  background: transparent; color: var(--muted); font-family: var(--fm);
+  font-size: .65rem; cursor: pointer; transition: all .15s; margin-left: auto;
+}
+.btn-raw:hover:not(:disabled) { color: var(--text); border-color: var(--text); }
+.btn-raw:disabled { opacity: .35; cursor: not-allowed; }
+
+/* ═══════════════════════════════════════
+   PANEL GRABACIÓN
+═══════════════════════════════════════ */
+.rec-panel {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: var(--r); padding: 20px;
+}
+.rec-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 16px; gap: 12px; flex-wrap: wrap;
+}
+.rec-title {
+  font-size: 1.05rem; font-weight: 700; letter-spacing: .5px;
+  text-transform: uppercase; display: flex; align-items: center; gap: 8px;
+}
+#rec-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--border2); transition: all .3s; flex-shrink: 0; }
+#rec-dot.recording { background: var(--warn); box-shadow: 0 0 0 3px rgba(255,59,59,.2); animation: recpulse 1s infinite; }
+@keyframes recpulse { 0%,100% { box-shadow: 0 0 0 3px rgba(255,59,59,.2); } 50% { box-shadow: 0 0 0 7px rgba(255,59,59,.04); } }
+.rec-meta { font-family: var(--fm); font-size: .68rem; color: var(--muted); display: flex; gap: 14px; flex-wrap: wrap; }
+.rec-meta span { display: flex; align-items: center; gap: 4px; }
+.rec-meta b { color: var(--text); }
+
+.speed-row { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
+.speed-label { font-family: var(--fm); font-size: .65rem; color: var(--muted); white-space: nowrap; }
+.speed-btns  { display: flex; gap: 5px; }
+.speed-btn {
+  font-family: var(--fm); font-size: .65rem; padding: 3px 9px;
+  border-radius: 4px; border: 1px solid var(--border2);
+  background: transparent; color: var(--muted); cursor: pointer; transition: all .15s;
+}
+.speed-btn.active { border-color: var(--c3); color: var(--c3); background: rgba(57,255,20,.08); }
+.speed-btn:hover:not(.active) { color: var(--text); border-color: var(--text); }
+.loop-toggle {
+  display: flex; align-items: center; gap: 6px;
+  font-family: var(--fm); font-size: .65rem; color: var(--muted);
+  cursor: pointer; margin-left: auto; user-select: none;
+}
+.loop-toggle input { accent-color: var(--c3); cursor: pointer; }
+.loop-toggle:hover { color: var(--text); }
+
+.rep-row { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
+.rep-label { font-family: var(--fm); font-size: .65rem; color: var(--muted); white-space: nowrap; }
+.rep-input-wrap {
+  display: flex; align-items: center; gap: 6px;
+  background: var(--surface); border: 1px solid var(--border2);
+  border-radius: var(--r2); padding: 3px 6px;
+}
+.rep-input-wrap:focus-within { border-color: var(--c3); }
+.rep-btn-adj {
+  width: 22px; height: 22px; border-radius: 4px;
+  border: 1px solid var(--border2); background: transparent;
+  color: var(--text); font-family: var(--fm); font-size: .9rem;
+  cursor: pointer; display: grid; place-items: center; line-height: 1; transition: all .15s;
+}
+.rep-btn-adj:hover { border-color: var(--c3); color: var(--c3); background: rgba(57,255,20,.08); }
+.rep-btn-adj:disabled { opacity: .35; cursor: not-allowed; }
+#rep-count {
+  background: transparent; border: none; color: var(--text);
+  font-family: var(--fm); font-size: .85rem; width: 42px;
+  text-align: center; outline: none;
+}
+#rep-count::-webkit-inner-spin-button, #rep-count::-webkit-outer-spin-button { -webkit-appearance: none; }
+#rep-count[type=number] { -moz-appearance: textfield; }
+.rep-infinite {
+  display: flex; align-items: center; gap: 5px;
+  font-family: var(--fm); font-size: .65rem; color: var(--muted);
+  cursor: pointer; user-select: none;
+}
+.rep-infinite input { accent-color: var(--c3); cursor: pointer; }
+.rep-infinite:hover { color: var(--text); }
+.rep-counter-display {
+  font-family: var(--fm); font-size: .65rem; color: var(--c3);
+  margin-left: auto; display: none; gap: 4px; align-items: center;
+}
+.rep-counter-display.active { display: flex; }
+
+.main-btns { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
+.btn-main {
+  display: flex; align-items: center; gap: 7px;
+  padding: 10px 20px; border-radius: var(--r2); border: none;
+  cursor: pointer; font-family: var(--fh); font-size: .9rem; font-weight: 700;
+  letter-spacing: .5px; text-transform: uppercase; transition: all .2s; flex-shrink: 0;
+}
+.btn-main:disabled { opacity: .35; cursor: not-allowed; transform: none !important; }
+.btn-main:hover:not(:disabled) { transform: translateY(-2px); filter: brightness(1.1); }
+.btn-rec    { background: var(--warn); color: #fff; }
+.btn-play   { background: var(--c3); color: #000; }
+.btn-stop   { background: #ffaa00; color: #000; display: none; }
+.btn-rst    { background: var(--surface); color: var(--text); border: 1px solid var(--border2); }
+.btn-export { background: transparent; color: var(--c1); border: 1px solid rgba(0,200,255,.3); font-size: .78rem; padding: 10px 14px; }
+.btn-import { background: transparent; color: var(--muted); border: 1px solid var(--border2); font-size: .78rem; padding: 10px 14px; }
+#file-import { display: none; }
+
+.timeline-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.timeline-label { font-family: var(--fm); font-size: .6rem; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); }
+.count-badge { font-family: var(--fm); font-size: .6rem; padding: 2px 7px; border-radius: 10px; background: var(--surface); border: 1px solid var(--border2); color: var(--muted); }
+#gesture-list { max-height: 160px; overflow-y: auto; display: flex; flex-direction: column; gap: 3px; }
+#gesture-list::-webkit-scrollbar { width: 3px; }
+#gesture-list::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+.gesture-item {
+  display: flex; align-items: center; gap: 10px; padding: 6px 10px;
+  background: var(--surface); border-radius: 5px;
+  font-family: var(--fm); font-size: .7rem;
+  animation: fadeUp .15s ease; border: 1px solid transparent; transition: border-color .2s;
+}
+@keyframes fadeUp { from { opacity:0; transform:translateY(4px); } to { opacity:1; transform:none; } }
+.gesture-idx { font-size: .58rem; color: var(--muted); min-width: 26px; }
+.gesture-s1  { color: var(--c1); }
+.gesture-s2  { color: var(--c2); }
+.gesture-ts  { color: var(--muted); margin-left: auto; font-size: .6rem; }
+.gesture-item.playing { background: rgba(57,255,20,.07); border-color: rgba(57,255,20,.2); }
+.empty-state {
+  text-align: center; padding: 20px; color: var(--muted);
+  font-family: var(--fm); font-size: .7rem;
+  border: 1px dashed var(--border2); border-radius: var(--r2);
+}
+
+/* ═══════════════════════════════════════
+   LOG
+═══════════════════════════════════════ */
+.log-panel { background: var(--card); border: 1px solid var(--border); border-radius: var(--r); padding: 16px 18px; }
+.log-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+#log-box { height: 110px; overflow-y: auto; font-family: var(--fm); font-size: .68rem; color: var(--muted); line-height: 1.9; }
+#log-box::-webkit-scrollbar { width: 3px; }
+#log-box::-webkit-scrollbar-thumb { background: var(--border2); }
+.log-line      { color: var(--muted); }
+.log-line.ok   { color: var(--ok); }
+.log-line.err  { color: var(--warn); }
+.log-line.info { color: var(--c1); }
+.log-line.warn { color: #ffaa00; }
+
+.btn-sm {
+  padding: 4px 12px; border-radius: 4px;
+  border: 1px solid var(--border2); background: transparent;
+  color: var(--muted); font-family: var(--fm); font-size: .65rem;
+  cursor: pointer; transition: all .15s;
+}
+.btn-sm:hover { color: var(--text); border-color: var(--text); }
+
+/* TOAST */
+#toast-container { position: fixed; bottom: 24px; right: 24px; z-index: 999; display: flex; flex-direction: column; gap: 8px; pointer-events: none; }
+.toast {
+  font-family: var(--fm); font-size: .72rem; padding: 9px 16px;
+  border-radius: var(--r2); border: 1px solid var(--border2);
+  background: var(--card2); color: var(--text);
+  animation: toastIn .2s ease; pointer-events: auto;
+  backdrop-filter: blur(8px); max-width: 280px;
+}
+.toast.ok   { border-color: rgba(57,255,20,.3);  color: var(--ok); }
+.toast.err  { border-color: rgba(255,59,59,.3);  color: var(--warn); }
+.toast.info { border-color: rgba(0,200,255,.3);  color: var(--c1); }
+@keyframes toastIn { from { opacity:0; transform: translateY(10px); } to { opacity:1; transform:none; } }
+
+#auto-reconnect-badge {
+  display: none; font-family: var(--fm); font-size: .6rem; color: #ffaa00;
+  border: 1px solid rgba(255,170,0,.3); border-radius: 4px; padding: 2px 8px;
+  animation: blink 1s infinite;
+}
+
+.card, .rec-panel, .log-panel { animation: cardIn .35s ease both; }
+@keyframes cardIn { from { opacity:0; transform: translateY(8px); } to { opacity:1; transform:none; } }
+.card:nth-child(2) { animation-delay: .05s; }
+.rec-panel { animation-delay: .1s; }
+.log-panel { animation-delay: .15s; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">🦾</div>
+    <div>
+      <div class="logo-text">Maitl <em>Teotl</em></div>
+      <div class="logo-ver">v2.1 — Exoesqueleto</div>
+    </div>
+  </div>
+
+  <div class="conn-bar">
+    <span id="auto-reconnect-badge">↻ RECONECTANDO…</span>
+    <div class="ip-group">
+      <span class="ip-label">ESP32 IP:</span>
+      <input class="ip-input" id="esp-ip" type="text" placeholder="192.168.1.100" autocomplete="off" spellcheck="false">
+    </div>
+    <button class="btn-connect" id="btn-connect" onclick="connect()">CONECTAR</button>
+    <div class="conn-status">
+      <div class="conn-dot" id="conn-dot"></div>
+      <span class="conn-label" id="conn-label">Desconectado</span>
+      <span class="conn-ip"   id="conn-ip"></span>
+    </div>
+    <a class="ts-link" href="https://thingspeak.mathworks.com/channels/3343258" target="_blank" rel="noopener">📊 ThingSpeak</a>
+  </div>
+</header>
+
+<main>
+
+  <div>
+    <div class="section-tag">Control de Servomotores</div>
+    <div class="servos-grid">
+
+      <div class="card s1">
+        <div class="card-header">
+          <div class="card-title">Servo 1 <span class="chip s1">PIN 18</span></div>
+        </div>
+        <div class="angle-row">
+          <div>
+            <div class="angle-big" id="disp-s1">90</div>
+            <div class="angle-deg">grados</div>
+          </div>
+          <div class="arc-wrap">
+            <svg class="arc-svg" width="110" height="62" viewBox="0 0 110 62">
+              <path d="M8,60 A50,50 0 0,1 102,60" fill="none" stroke="#1e2a38" stroke-width="5" stroke-linecap="round"/>
+              <path id="arc1" d="M8,60 A50,50 0 0,1 102,60" fill="none" stroke="#00c8ff" stroke-width="5"
+                    stroke-linecap="round" stroke-dasharray="157" stroke-dashoffset="78.5"
+                    style="filter:drop-shadow(0 0 4px #00c8ff88)"/>
+              <circle id="needle1" cx="55" cy="60" r="5" fill="#00c8ff" style="filter:drop-shadow(0 0 5px #00c8ff)"/>
+            </svg>
+          </div>
+        </div>
+        <div class="slider-wrap">
+          <div class="slider-labels"><span>0°</span><span>90°</span><span>180°</span></div>
+          <input type="range" id="slider1" min="0" max="180" value="90"
+                 oninput="onSliderInput(1, this.value)"
+                 onchange="onSliderCommit(1, this.value)">
+        </div>
+        <div class="presets">
+          <button class="preset-btn" onclick="setAngle(1,0)"   data-ctrl>0°</button>
+          <button class="preset-btn" onclick="setAngle(1,45)"  data-ctrl>45°</button>
+          <button class="preset-btn" onclick="setAngle(1,90)"  data-ctrl>90°</button>
+          <button class="preset-btn" onclick="setAngle(1,135)" data-ctrl>135°</button>
+          <button class="preset-btn" onclick="setAngle(1,180)" data-ctrl>180°</button>
+        </div>
+        <div class="manual-row">
+          <input type="number" id="manual1" min="0" max="180" placeholder="0 – 180" data-ctrl>
+          <button class="btn-send" onclick="sendManual(1)" data-ctrl>ENVIAR</button>
+        </div>
+      </div>
+
+      <div class="card s2">
+        <div class="card-header">
+          <div class="card-title">Servo 2 <span class="chip s2">PIN 19</span></div>
+        </div>
+        <div class="angle-row">
+          <div>
+            <div class="angle-big" id="disp-s2">90</div>
+            <div class="angle-deg">grados</div>
+          </div>
+          <div class="arc-wrap">
+            <svg class="arc-svg" width="110" height="62" viewBox="0 0 110 62">
+              <path d="M8,60 A50,50 0 0,1 102,60" fill="none" stroke="#1e2a38" stroke-width="5" stroke-linecap="round"/>
+              <path id="arc2" d="M8,60 A50,50 0 0,1 102,60" fill="none" stroke="#ff5722" stroke-width="5"
+                    stroke-linecap="round" stroke-dasharray="157" stroke-dashoffset="78.5"
+                    style="filter:drop-shadow(0 0 4px #ff572288)"/>
+              <circle id="needle2" cx="55" cy="60" r="5" fill="#ff5722" style="filter:drop-shadow(0 0 5px #ff5722)"/>
+            </svg>
+          </div>
+        </div>
+        <div class="slider-wrap">
+          <div class="slider-labels"><span>0°</span><span>90°</span><span>180°</span></div>
+          <input type="range" id="slider2" min="0" max="180" value="90"
+                 oninput="onSliderInput(2, this.value)"
+                 onchange="onSliderCommit(2, this.value)">
+        </div>
+        <div class="presets">
+          <button class="preset-btn" onclick="setAngle(2,0)"   data-ctrl>0°</button>
+          <button class="preset-btn" onclick="setAngle(2,45)"  data-ctrl>45°</button>
+          <button class="preset-btn" onclick="setAngle(2,90)"  data-ctrl>90°</button>
+          <button class="preset-btn" onclick="setAngle(2,135)" data-ctrl>135°</button>
+          <button class="preset-btn" onclick="setAngle(2,180)" data-ctrl>180°</button>
+        </div>
+        <div class="manual-row">
+          <input type="number" id="manual2" min="0" max="180" placeholder="0 – 180" data-ctrl>
+          <button class="btn-send" onclick="sendManual(2)" data-ctrl>ENVIAR</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card flex-card">
+    <div class="section-tag">Sensor de Flexión</div>
+    <div class="flex-body">
+      <div class="flex-num-wrap">
+        <div class="flex-num"><span id="flex-val">--</span></div>
+        <div class="flex-unit">%</div>
+        <div class="flex-raw" id="flex-raw-display">RAW: ---</div>
+      </div>
+      <div class="flex-right">
+        <div class="flex-bar-label">
+          <span>Recto (0%)</span>
+          <span id="flex-state">Esperando…</span>
+          <span>Doblado (100%)</span>
+        </div>
+        <div class="flex-bar-bg"><div class="flex-bar-fill" id="flex-bar"></div></div>
+        <div class="flex-nodata" id="flex-nodata" style="display:none">⚠ Sin datos del sensor</div>
+      </div>
+    </div>
+    <div class="calib-row">
+      <span class="calib-label">CALIBRACIÓN:</span>
+      <span class="calib-label">Min ADC</span>
+      <input class="calib-input" id="calib-min" type="number" value="500" min="0" max="4095" data-ctrl>
+      <span class="calib-label">Max ADC</span>
+      <input class="calib-input" id="calib-max" type="number" value="3500" min="0" max="4095" data-ctrl>
+      <button class="btn-calib" id="btn-calib" onclick="sendCalibration()" data-ctrl>APLICAR</button>
+      
+      <button class="btn-calib" style="border-color: var(--c1); color: var(--c1); background: rgba(0,200,255,.07); margin-left: 8px;" onclick="enviarASupabase()">☁️ GUARDAR EN NUBE</button>
+      
+      <button class="btn-raw"   id="btn-raw"   onclick="readRaw()" data-ctrl>VER ADC RAW</button>
+    </div>
+  </div>
+
+  <div class="rec-panel">
+    <div class="rec-header">
+      <div class="rec-title">
+        <div id="rec-dot"></div>
+        Secuencias Gestuales
+      </div>
+      <div class="rec-meta">
+        <span>FRAMES <b id="frame-count">0</b></span>
+        <span>DURACIÓN <b id="rec-duration">0.0s</b></span>
+        <span>VELOCIDAD <b id="play-speed-display">1×</b></span>
+        <span>REPS <b id="rep-display">1×</b></span>
+      </div>
+    </div>
+
+    <div class="speed-row">
+      <span class="speed-label">VELOCIDAD:</span>
+      <div class="speed-btns">
+        <button class="speed-btn" onclick="setSpeed(0.25)">0.25×</button>
+        <button class="speed-btn" onclick="setSpeed(0.5)">0.5×</button>
+        <button class="speed-btn active" onclick="setSpeed(1)">1×</button>
+        <button class="speed-btn" onclick="setSpeed(1.5)">1.5×</button>
+        <button class="speed-btn" onclick="setSpeed(2)">2×</button>
+      </div>
+      <label class="loop-toggle">
+        <input type="checkbox" id="chk-loop"> LOOP
+      </label>
+    </div>
+
+    <div class="rep-row">
+      <span class="rep-label">REPETICIONES:</span>
+      <div class="rep-input-wrap">
+        <button class="rep-btn-adj" onclick="adjustReps(-1)">−</button>
+        <input type="number" id="rep-count" min="1" max="999" value="1">
+        <button class="rep-btn-adj" onclick="adjustReps(1)">+</button>
+      </div>
+      <label class="rep-infinite">
+        <input type="checkbox" id="chk-infinite" onchange="onInfiniteChange()"> ∞ Infinito
+      </label>
+      <div class="rep-counter-display" id="rep-counter-display">
+        ↻ <span id="rep-current">0</span> / <span id="rep-total">1</span>
+      </div>
+    </div>
+
+    <div class="main-btns">
+      <button class="btn-main btn-rec"    id="btn-rec"    onclick="toggleRecord()">⏺ Grabar</button>
+      <button class="btn-main btn-play"   id="btn-play"   onclick="playSequence()" disabled>▶ Reproducir</button>
+      <button class="btn-main btn-stop"   id="btn-stop"   onclick="stopPlayback()">⏹ Detener</button>
+      <button class="btn-main btn-rst"                    onclick="resetAll()">↺ Reset</button>
+      <button class="btn-main btn-export"                 onclick="exportSequence()">⬇ Exportar</button>
+      <button class="btn-main btn-import"                 onclick="document.getElementById('file-import').click()">⬆ Importar</button>
+      <input type="file" id="file-import" accept=".json" onchange="importSequence(this)">
+    </div>
+
+    <div class="timeline-header">
+      <span class="timeline-label">Secuencia grabada</span>
+      <span class="count-badge" id="badge-count">0 frames</span>
+    </div>
+    <div id="gesture-list">
+      <div class="empty-state">Sin movimientos. Pulsa Grabar y mueve los sliders.</div>
+    </div>
+  </div>
+
+  <div class="log-panel">
+    <div class="log-top">
+      <div class="section-tag" style="margin:0">Log de comunicación</div>
+      <button class="btn-sm" onclick="clearLog()">Limpiar</button>
+    </div>
+    <div id="log-box"></div>
+  </div>
+
+</main>
+
+<div id="toast-container"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<script>
+'use strict';
+
+// ═══════════════════════════════════════
+//  ESTADO GLOBAL
+// ═══════════════════════════════════════
+const state = {
+  ip:          '',
+  connected:   false,
+  connecting:  false,
+  angles:      [90, 90],
+  flex:        null,
+  flexNoData:  false,
+  recording:    false,
+  sequence:     [],
+  recStartTime: 0,
+  _recTimer:    null,
+  lastFrameTime: 0,
+  playing:      false,
+  playSpeed:    1,
+  playReps:     1,
+  playRepsDone: 0,
+  _playTimeout: null,
+  _pollInterval:    null,
+  _flexNoDataTimer: null,
+  _reconnectTimer:  null,
+  reconnectAttempts: 0,
+};
+
+const FRAME_MIN_INTERVAL = 80;
+const POLL_INTERVAL      = 2000;
+const RECONNECT_DELAYS   = [2000, 4000, 8000, 15000, 30000];
+const FLEX_TIMEOUT       = 6000;
+
+// ═══════════════════════════════════════
+//  CONEXIÓN A SUPABASE (NUBE)
+// ═══════════════════════════════════════
+const { createClient } = supabase;
+const supabaseUrl = 'https://cueywkbkambkdfhflwvh.supabase.co';
+const supabaseKey = 'sb_publishable_mo4kX7qzqHp7-Ezuh9pLwQ_9XccnR8s';
+const db = createClient(supabaseUrl, supabaseKey);
+
+async function enviarASupabase() {
+  // Tomamos el valor de flexión actual o 0 si no hay lectura
+  const val_f1 = state.flex !== null ? Math.round(state.flex) : 0;
+  
+  try {
+    const { data, error } = await db
+      .from('registro_flexion')
+      .insert([
+        { f1: val_f1, f2: 0, f3: 0, f4: 0, f5: 0 }
+      ]);
+
+    if (error) throw error;
+    
+    toast('☁️ Guardado en la nube', 'info');
+    log(`☁️ Lectura en la nube (f1: ${val_f1}%)`, 'info');
+  } catch (error) {
+    toast('Error en la nube', 'err');
+    log(`✗ Error Supabase: ${error.message}`, 'err');
+  }
+}
+
+// ═══════════════════════════════════════
+//  IP PERSISTENTE
+// ═══════════════════════════════════════
+(function initIP() {
+  try {
+    const saved = localStorage.getItem('sm_ip');
+    document.getElementById('esp-ip').value = saved || '192.168.1.100';
+  } catch(e) {
+    document.getElementById('esp-ip').value = '192.168.1.100';
+  }
+})();
+
+// ═══════════════════════════════════════
+//  LOG
+// ═══════════════════════════════════════
+function log(msg, type = '') {
+  const box = document.getElementById('log-box');
+  const div = document.createElement('div');
+  const ts  = new Date().toLocaleTimeString('es-MX', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+  div.className   = `log-line ${type}`;
+  div.textContent = `[${ts}] ${msg}`;
+  box.appendChild(div);
+  box.scrollTop = box.scrollHeight;
+  while (box.children.length > 120) box.removeChild(box.firstChild);
+}
+function clearLog() { document.getElementById('log-box').innerHTML = ''; }
+
+// ═══════════════════════════════════════
+//  TOAST
+// ═══════════════════════════════════════
+function toast(msg, type = 'info', ms = 2800) {
+  const c   = document.getElementById('toast-container');
+  const div = document.createElement('div');
+  div.className   = `toast ${type}`;
+  div.textContent = msg;
+  c.appendChild(div);
+  setTimeout(() => div.remove(), ms);
+}
+
+// ═══════════════════════════════════════
+//  FETCH HELPER — usa IP del estado
+// ═══════════════════════════════════════
+async function fetchESP(path, timeout = 2000) {
+  return fetch(`http://${state.ip}${path}`, { signal: AbortSignal.timeout(timeout) });
+}
+
+// ═══════════════════════════════════════
+//  CONEXIÓN
+// ═══════════════════════════════════════
+async function connect(silent = false) {
+  if (state.connecting) return;
+  const ip = document.getElementById('esp-ip').value.trim();
+  if (!ip) { toast('Ingresa una IP válida', 'err'); return; }
+
+  state.ip        = ip;
+  state.connecting = true;
+  try { localStorage.setItem('sm_ip', ip); } catch(e) {}
+
+  const btn = document.getElementById('btn-connect');
+  btn.textContent = 'CONECTANDO…';
+  btn.classList.add('connecting');
+
+  if (!silent) log(`Conectando a ${ip}…`, 'info');
+
+  try {
+    const r = await fetchESP('/status', 4000);
+    if (r.ok) {
+      const d = await r.json();
+      setConnected(true);
+      updateUI(d);
+      if (!silent) {
+        log(`✓ Conectado — S1:${d.servo1}° S2:${d.servo2}° Flex:${d.flex !== undefined ? d.flex + '%' : 'N/A'}`, 'ok');
+        toast('Conectado al ESP32', 'ok');
+      }
+      state.reconnectAttempts = 0;
+      clearAutoReconnect();
+      startPolling();
+    } else {
+      throw new Error(`HTTP ${r.status}`);
+    }
+  } catch (e) {
+    setConnected(false);
+    if (!silent) {
+      log(`✗ Sin respuesta: ${e.message}`, 'err');
+      toast('Sin respuesta del ESP32', 'err');
+    }
+  } finally {
+    state.connecting = false;
+    btn.textContent = 'CONECTAR';
+    btn.classList.remove('connecting');
+  }
+}
+
+function setConnected(ok) {
+  state.connected = ok;
+  const dot   = document.getElementById('conn-dot');
+  const label = document.getElementById('conn-label');
+  const ipEl  = document.getElementById('conn-ip');
+  if (ok) {
+    dot.className     = 'conn-dot ok';
+    label.textContent = 'Conectado';
+    ipEl.textContent  = `• ${state.ip}`;
+  } else {
+    dot.className     = 'conn-dot error';
+    label.textContent = 'Desconectado';
+    ipEl.textContent  = '';
+  }
+  setControlsEnabled(ok);
+}
+
+function setControlsEnabled(enabled) {
+  document.getElementById('slider1').disabled = !enabled;
+  document.getElementById('slider2').disabled = !enabled;
+  document.querySelectorAll('[data-ctrl]').forEach(el => { el.disabled = !enabled; });
+  document.querySelectorAll('.preset-btn').forEach(el => { el.disabled = !enabled; });
+  document.getElementById('btn-rec').disabled  = !enabled;
+  document.getElementById('btn-play').disabled = !enabled || state.sequence.length === 0;
+}
+
+// ═══════════════════════════════════════
+//  RECONEXIÓN AUTOMÁTICA
+// ═══════════════════════════════════════
+function scheduleReconnect() {
+  if (state._reconnectTimer) return;
+  const delay = RECONNECT_DELAYS[Math.min(state.reconnectAttempts, RECONNECT_DELAYS.length - 1)];
+  state.reconnectAttempts++;
+  document.getElementById('auto-reconnect-badge').style.display = 'inline';
+  document.getElementById('conn-dot').className = 'conn-dot warn';
+  document.getElementById('conn-label').textContent = `Reconectando en ${(delay/1000).toFixed(0)}s…`;
+  log(`↻ Reconexión automática en ${delay/1000}s (intento ${state.reconnectAttempts})`, 'warn');
+  state._reconnectTimer = setTimeout(async () => {
+    state._reconnectTimer = null;
+    await connect(true);
+    if (!state.connected) scheduleReconnect();
+  }, delay);
+}
+
+function clearAutoReconnect() {
+  clearTimeout(state._reconnectTimer);
+  state._reconnectTimer = null;
+  document.getElementById('auto-reconnect-badge').style.display = 'none';
+}
+
+// ═══════════════════════════════════════
+//  POLLING
+// ═══════════════════════════════════════
+function startPolling() {
+  stopPolling();
+  state._pollInterval = setInterval(async () => {
+    if (!state.connected || state.playing) return;
+    try {
+      const r = await fetchESP('/status', 2000);
+      if (r.ok) {
+        updateUI(await r.json());
+        resetFlexNoDataTimer();
+      } else {
+        handleDisconnect();
+      }
+    } catch {
+      handleDisconnect();
+    }
+  }, POLL_INTERVAL);
+}
+
+function stopPolling() {
+  clearInterval(state._pollInterval);
+  state._pollInterval = null;
+}
+
+function handleDisconnect() {
+  if (!state.connected) return;
+  setConnected(false);
+  stopPolling();
+  log('✗ Conexión perdida', 'err');
+  toast('Conexión perdida — reconectando…', 'err');
+  scheduleReconnect();
+}
+
+// ═══════════════════════════════════════
+//  ACTUALIZACIÓN UI
+// ═══════════════════════════════════════
+function updateUI(d) {
+  if (d.servo1 !== undefined) setLocalAngle(1, d.servo1);
+  if (d.servo2 !== undefined) setLocalAngle(2, d.servo2);
+  if (d.flex   !== undefined) updateFlex(d.flex);
+}
+
+function setLocalAngle(n, val) {
+  val = Math.round(Math.max(0, Math.min(180, val)));
+  state.angles[n - 1] = val;
+  document.getElementById(`disp-s${n}`).textContent = val;
+  const sl = document.getElementById(`slider${n}`);
+  sl.value = val;
+  updateSliderFill(n, val);
+  updateArc(n, val);
+}
+
+function updateSliderFill(n, val) {
+  document.getElementById(`slider${n}`).style.setProperty('--fill', (val / 180 * 100).toFixed(1) + '%');
+}
+
+function updateArc(n, angle) {
+  const arc    = document.getElementById(`arc${n}`);
+  const needle = document.getElementById(`needle${n}`);
+  const total  = 157;
+  arc.style.strokeDashoffset = total - (angle / 180) * total;
+  const theta = Math.PI * (1 - angle / 180);
+  needle.setAttribute('cx', (55 + 50 * Math.cos(theta)).toFixed(1));
+  needle.setAttribute('cy', (60 - 50 * Math.sin(theta)).toFixed(1));
+}
+
+function updateFlex(val) {
+  state.flex = val;
+  state.flexNoData = false;
+  document.getElementById('flex-val').textContent  = val.toFixed(1);
+  document.getElementById('flex-bar').style.width  = val + '%';
+  document.getElementById('flex-nodata').style.display = 'none';
+  const s = document.getElementById('flex-state');
+  if      (val < 10) { s.textContent = 'RECTO';            s.style.color = 'var(--c3)'; }
+  else if (val < 35) { s.textContent = 'LEVE CURVATURA';   s.style.color = '#7fff00'; }
+  else if (val < 65) { s.textContent = 'CURVATURA MEDIA';  s.style.color = 'var(--c2)'; }
+  else               { s.textContent = 'CURVATURA MÁXIMA'; s.style.color = 'var(--warn)'; }
+  resetFlexNoDataTimer();
+}
+
+function resetFlexNoDataTimer() {
+  clearTimeout(state._flexNoDataTimer);
+  state._flexNoDataTimer = setTimeout(() => {
+    document.getElementById('flex-nodata').style.display = 'block';
+    document.getElementById('flex-state').textContent    = 'SIN SEÑAL';
+    document.getElementById('flex-state').style.color   = 'var(--warn)';
+  }, FLEX_TIMEOUT);
+}
+
+// ═══════════════════════════════════════
+//  SLIDERS
+// ═══════════════════════════════════════
+function onSliderInput(n, val) {
+  setLocalAngle(n, parseInt(val));
+  if (state.recording) recordFrame();
+}
+
+function onSliderCommit(n, val) {
+  val = parseInt(val);
+  setLocalAngle(n, val);
+  moveServo(n, val);
+  if (state.recording) recordFrame();
+}
+
+// ═══════════════════════════════════════
+//  ENVÍO AL ESP32
+// ═══════════════════════════════════════
+async function moveServo(n, angle) {
+  if (!state.connected) { log('No conectado', 'err'); return; }
+  try {
+    const r = await fetchESP(`/move?s=${n}&angle=${angle}`);
+    if (r.ok) { log(`→ Servo ${n} → ${angle}°`, 'ok'); }
+    else { log(`✗ Servo ${n} error HTTP ${r.status}`, 'err'); }
+  } catch (e) {
+    log(`✗ Servo ${n}: ${e.message}`, 'err');
+    handleDisconnect();
+  }
+}
+
+async function moveBoth(a1, a2) {
+  if (!state.connected) return false;
+  try {
+    const r = await fetchESP(`/moveboth?a1=${a1}&a2=${a2}`);
+    if (!r.ok) { handleDisconnect(); return false; }
+    return true;
+  } catch (e) {
+    log(`✗ moveBoth: ${e.message}`, 'err');
+    handleDisconnect();
+    return false;
+  }
+}
+
+function setAngle(n, val) {
+  setLocalAngle(n, val);
+  moveServo(n, val);
+  if (state.recording) recordFrame();
+}
+
+function sendManual(n) {
+  const input = document.getElementById(`manual${n}`);
+  let val = parseInt(input.value);
+  if (isNaN(val)) { toast('Ángulo inválido', 'err'); return; }
+  val = Math.max(0, Math.min(180, val));
+  setAngle(n, val);
+}
+
+// ═══════════════════════════════════════
+//  CALIBRACIÓN
+// ═══════════════════════════════════════
+async function sendCalibration() {
+  if (!state.connected) { toast('No conectado', 'err'); return; }
+  const mn = parseInt(document.getElementById('calib-min').value);
+  const mx = parseInt(document.getElementById('calib-max').value);
+  if (isNaN(mn) || isNaN(mx) || mn >= mx) { toast('min < max requerido', 'err'); return; }
+  try {
+    const r = await fetchESP(`/calibrate?min=${mn}&max=${mx}`);
+    const d = await r.json();
+    if (d.ok) { log(`✓ Calibración — min:${d.min} max:${d.max}`, 'ok'); toast('Calibración aplicada', 'ok'); }
+  } catch (e) { log(`✗ Calibración: ${e.message}`, 'err'); }
+}
+
+async function readRaw() {
+  if (!state.connected) { toast('No conectado', 'err'); return; }
+  try {
+    const r = await fetchESP('/raw');
+    const d = await r.json();
+    document.getElementById('flex-raw-display').textContent = `RAW: ${d.raw}`;
+    log(`ADC raw: ${d.raw}`, 'info');
+    toast(`ADC Raw: ${d.raw}`, 'info');
+  } catch (e) { log(`✗ Raw: ${e.message}`, 'err'); }
+}
+
+// ═══════════════════════════════════════
+//  GRABACIÓN
+// ═══════════════════════════════════════
+function toggleRecord() {
+  if (!state.recording) startRecording(); else stopRecording();
+}
+
+function startRecording() {
+  if (!state.connected) { toast('Conecta el ESP32 primero', 'err'); return; }
+  state.recording    = true;
+  state.sequence     = [];
+  state.recStartTime = Date.now();
+  state.lastFrameTime = 0;
+
+  document.getElementById('btn-rec').innerHTML         = '⏹ Detener';
+  document.getElementById('btn-rec').style.background  = '#ff5722';
+  document.getElementById('rec-dot').className         = 'recording';
+  document.getElementById('btn-play').disabled         = true;
+  document.getElementById('gesture-list').innerHTML    = '';
+  document.getElementById('badge-count').textContent   = '0 frames';
+  document.getElementById('frame-count').textContent   = '0';
+
+  state._recTimer = setInterval(() => {
+    document.getElementById('rec-duration').textContent =
+      ((Date.now() - state.recStartTime) / 1000).toFixed(1) + 's';
+  }, 100);
+
+  log('⏺ Grabación iniciada', 'info');
+  toast('Grabando…', 'info', 1500);
+}
+
+function stopRecording() {
+  state.recording = false;
+  clearInterval(state._recTimer);
+  document.getElementById('btn-rec').innerHTML         = '⏺ Grabar';
+  document.getElementById('btn-rec').style.background  = '';
+  document.getElementById('rec-dot').className         = '';
+  document.getElementById('btn-play').disabled         = state.sequence.length === 0;
+  const n = state.sequence.length;
+  log(`⏹ Grabación detenida — ${n} frames`, n > 0 ? 'ok' : 'warn');
+  if (n > 0) toast(`${n} frames grabados`, 'ok');
+}
+
+function recordFrame() {
+  const now = Date.now();
+  if (now - state.lastFrameTime < FRAME_MIN_INTERVAL) return;
+  state.lastFrameTime = now;
+  const t = now - state.recStartTime;
+  state.sequence.push({ a1: state.angles[0], a2: state.angles[1], t });
+  appendGestureItem(state.sequence.length, state.angles[0], state.angles[1], t);
+  document.getElementById('frame-count').textContent  = state.sequence.length;
+  document.getElementById('badge-count').textContent  = state.sequence.length + ' frames';
+}
+
+function appendGestureItem(idx, a1, a2, t) {
+  const list  = document.getElementById('gesture-list');
+  const empty = list.querySelector('.empty-state');
+  if (empty) empty.remove();
+  const div = document.createElement('div');
+  div.className = 'gesture-item';
+  div.id        = `gf-${idx}`;
+  div.innerHTML = `
+    <span class="gesture-idx">#${idx}</span>
+    <span class="gesture-s1">S1: ${a1}°</span>
+    <span class="gesture-s2">S2: ${a2}°</span>
+    <span class="gesture-ts">${(t / 1000).toFixed(2)}s</span>`;
+  list.appendChild(div);
+  list.scrollTop = list.scrollHeight;
+}
+
+// ═══════════════════════════════════════
+//  REPETICIONES
+// ═══════════════════════════════════════
+function adjustReps(delta) {
+  const input = document.getElementById('rep-count');
+  input.value = Math.max(1, Math.min(999, (parseInt(input.value) || 1) + delta));
+  updateRepDisplay();
+}
+
+function onInfiniteChange() {
+  const inf   = document.getElementById('chk-infinite').checked;
+  const input = document.getElementById('rep-count');
+  input.disabled = inf;
+  document.querySelectorAll('.rep-btn-adj').forEach(b => b.disabled = inf);
+  updateRepDisplay();
+}
+
+function updateRepDisplay() {
+  const inf = document.getElementById('chk-infinite').checked;
+  document.getElementById('rep-display').textContent =
+    inf ? '∞' : (parseInt(document.getElementById('rep-count').value) || 1) + '×';
+}
+
+function setSpeed(s) {
+  state.playSpeed = s;
+  document.getElementById('play-speed-display').textContent = s + '×';
+  document.querySelectorAll('.speed-btn').forEach(b => {
+    b.classList.toggle('active', parseFloat(b.textContent) === s);
+  });
+}
+
+// ═══════════════════════════════════════
+//  REPRODUCCIÓN
+// ═══════════════════════════════════════
+async function playSequence() {
+  if (state.sequence.length === 0 || !state.connected) return;
+
+  const infinite = document.getElementById('chk-infinite').checked;
+  const reps     = infinite ? Infinity : (parseInt(document.getElementById('rep-count').value) || 1);
+  state.playReps     = reps;
+  state.playRepsDone = 0;
+  state.playing      = true;
+
+  document.getElementById('btn-play').style.display = 'none';
+  document.getElementById('btn-stop').style.display = 'flex';
+  document.getElementById('btn-rec').disabled = true;
+
+  const counterEl = document.getElementById('rep-counter-display');
+  counterEl.classList.add('active');
+  document.getElementById('rep-total').textContent   = infinite ? '∞' : reps;
+  document.getElementById('rep-current').textContent = '0';
+
+  log(`▶ Reproduciendo — ${infinite ? '∞' : reps} repetición(es) a ${state.playSpeed}×`, 'info');
+  await runPlayback();
+}
+
+async function runPlayback() {
+  const seq = [...state.sequence];
+  let i = 0;
+
+  async function step() {
+    if (!state.playing) { finishPlayback(); return; }
+    if (i >= seq.length) {
+      state.playRepsDone++;
+      document.getElementById('rep-current').textContent = state.playRepsDone;
+      const infinite  = document.getElementById('chk-infinite').checked;
+      const loopCheck = document.getElementById('chk-loop').checked;
+      const moreReps  = infinite || state.playRepsDone < state.playReps;
+      if (state.playing && (moreReps || loopCheck)) {
+        i = 0;
+        log(`↻ Rep ${infinite ? '∞' : state.playRepsDone + '/' + state.playReps} — reiniciando`, 'info');
+        step();
+      } else {
+        log(`✓ Completado — ${state.playRepsDone} rep(s)`, 'ok');
+        toast(`Listo: ${state.playRepsDone} rep(s)`, 'ok');
+        finishPlayback();
+      }
+      return;
+    }
+    const frame = seq[i];
+    document.querySelectorAll('.gesture-item').forEach(el => el.classList.remove('playing'));
+    const el = document.getElementById(`gf-${i + 1}`);
+    if (el) { el.classList.add('playing'); el.scrollIntoView({ block: 'nearest' }); }
+    setLocalAngle(1, frame.a1);
+    setLocalAngle(2, frame.a2);
+    const ok = await moveBoth(frame.a1, frame.a2);
+    if (!ok) { log('✗ Reproducción interrumpida', 'err'); finishPlayback(); return; }
+    i++;
+    const rawDelay = i < seq.length ? (seq[i].t - frame.t) : 0;
+    state._playTimeout = setTimeout(step, Math.max(50, rawDelay / state.playSpeed));
+  }
+  step();
+}
+
+function stopPlayback() {
+  state.playing = false;
+  clearTimeout(state._playTimeout);
+  document.querySelectorAll('.gesture-item').forEach(el => el.classList.remove('playing'));
+  log('⏹ Reproducción detenida', 'warn');
+  finishPlayback();
+}
+
+function finishPlayback() {
+  state.playing = false;
+  document.getElementById('btn-play').style.display = 'flex';
+  document.getElementById('btn-stop').style.display = 'none';
+  document.getElementById('btn-play').disabled       = false;
+  document.getElementById('btn-rec').disabled        = false;
+  document.getElementById('rep-counter-display').classList.remove('active');
+}
+
+// ═══════════════════════════════════════
+//  EXPORTAR / IMPORTAR
+// ═══════════════════════════════════════
+function exportSequence() {
+  if (state.sequence.length === 0) { toast('No hay secuencia grabada', 'err'); return; }
+  const blob = new Blob([JSON.stringify({ version:2, created: new Date().toISOString(), frames: state.sequence }, null, 2)], { type: 'application/json' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url; a.download = `maitl_seq_${Date.now()}.json`; a.click();
+  URL.revokeObjectURL(url);
+  log(`⬇ Secuencia exportada (${state.sequence.length} frames)`, 'ok');
+  toast('Secuencia exportada', 'ok');
+}
+
+function importSequence(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const data   = JSON.parse(e.target.result);
+      const frames = data.frames || data;
+      if (!Array.isArray(frames)) throw new Error('Formato inválido');
+      state.sequence = frames;
+      document.getElementById('gesture-list').innerHTML = '';
+      frames.forEach((f, i) => appendGestureItem(i + 1, f.a1, f.a2, f.t));
+      document.getElementById('frame-count').textContent  = frames.length;
+      document.getElementById('badge-count').textContent  = frames.length + ' frames';
+      document.getElementById('btn-play').disabled        = false;
+      log(`⬆ Importados: ${frames.length} frames`, 'ok');
+      toast(`${frames.length} frames importados`, 'ok');
+    } catch (err) {
+      log(`✗ Error importar: ${err.message}`, 'err');
+      toast('Archivo inválido', 'err');
+    }
+  };
+  reader.readAsText(file);
+  input.value = '';
+}
+
+// ═══════════════════════════════════════
+//  RESET
+// ═══════════════════════════════════════
+async function resetAll() {
+  if (state.playing)   stopPlayback();
+  if (state.recording) stopRecording();
+  state.sequence = [];
+  document.getElementById('gesture-list').innerHTML = '<div class="empty-state">Sin movimientos. Pulsa Grabar y mueve los sliders.</div>';
+  document.getElementById('badge-count').textContent = '0 frames';
+  document.getElementById('frame-count').textContent = '0';
+  document.getElementById('rec-duration').textContent = '0.0s';
+  document.getElementById('btn-play').disabled = true;
+  setLocalAngle(1, 90);
+  setLocalAngle(2, 90);
+  log('↺ Reset — servos en 90°, secuencia borrada', 'info');
+  if (state.connected) {
+    try { await fetchESP('/reset'); log('↺ ESP32 reset OK', 'ok'); }
+    catch { log('✗ ESP32 no respondió al reset', 'err'); }
+  }
+}
+
+// ═══════════════════════════════════════
+//  INICIALIZACIÓN
+// ═══════════════════════════════════════
+window.addEventListener('load', () => {
+  updateArc(1, 90); updateArc(2, 90);
+  updateSliderFill(1, 90); updateSliderFill(2, 90);
+  setControlsEnabled(false);
+  updateRepDisplay();
+  const savedIP = document.getElementById('esp-ip').value;
+  log(`Maitl Teotl v2.1 listo. IP: ${savedIP} — Supabase Conectado`, 'info');
+});
+</script>
+</body>
+</html>
